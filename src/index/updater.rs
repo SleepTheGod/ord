@@ -101,7 +101,7 @@ impl Updater {
     let (mut outpoint_sender, mut value_receiver) = Self::spawn_fetcher(index)?;
 
     let mut uncommitted = 0;
-    let mut value_cache = HashMap::new();
+    let mut value_cache = BTreeMap::new();
     loop {
       let block = match rx.recv() {
         Ok(block) => block,
@@ -133,7 +133,7 @@ impl Updater {
 
       if uncommitted == 5000 {
         self.commit(wtx, value_cache)?;
-        value_cache = HashMap::new();
+        value_cache = BTreeMap::new();
         uncommitted = 0;
         wtx = index.begin_write()?;
         let height = wtx
@@ -333,7 +333,7 @@ impl Updater {
     value_receiver: &mut Receiver<u64>,
     wtx: &mut WriteTransaction,
     block: BlockData,
-    value_cache: &mut HashMap<OutPoint, u64>,
+    value_cache: &mut BTreeMap<OutPointValue, u64>,
   ) -> Result<()> {
     // If value_receiver still has values something went wrong with the last block
     // Could be an assert, shouldn't recover from this and commit the last block
@@ -365,7 +365,7 @@ impl Updater {
             continue;
           }
           // We don't need input values we already have in our value_cache from earlier blocks
-          if value_cache.contains_key(&prev_output) {
+          if value_cache.contains_key(&prev_output.store()) {
             continue;
           }
           // We don't need input values we already have in our outpoint_to_value table from earlier blocks that
@@ -619,7 +619,7 @@ impl Updater {
     Ok(())
   }
 
-  fn commit(&mut self, wtx: WriteTransaction, value_cache: HashMap<OutPoint, u64>) -> Result {
+  fn commit(&mut self, wtx: WriteTransaction, value_cache: BTreeMap<OutPointValue, u64>) -> Result {
     log::info!(
       "Committing at block height {}, {} outputs traversed, {} in map, {} cached",
       self.height,
@@ -649,7 +649,7 @@ impl Updater {
       let mut outpoint_to_value = wtx.open_table(OUTPOINT_TO_VALUE)?;
 
       for (outpoint, value) in value_cache {
-        outpoint_to_value.insert(&outpoint.store(), &value)?;
+        outpoint_to_value.insert(&outpoint, &value)?;
       }
     }
 

@@ -35,7 +35,7 @@ pub(super) struct InscriptionUpdater<'a, 'db, 'tx> {
   satpoint_to_id: &'a mut Table<'db, 'tx, &'static SatPointValue, &'static InscriptionIdValue>,
   timestamp: u32,
   pub(super) unbound_inscriptions: u64,
-  value_cache: &'a mut HashMap<OutPoint, u64>,
+  value_cache: &'a mut BTreeMap<OutPointValue, u64>,
 }
 
 impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
@@ -51,7 +51,7 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
     satpoint_to_id: &'a mut Table<'db, 'tx, &'static SatPointValue, &'static InscriptionIdValue>,
     timestamp: u32,
     unbound_inscriptions: u64,
-    value_cache: &'a mut HashMap<OutPoint, u64>,
+    value_cache: &'a mut BTreeMap<OutPointValue, u64>,
   ) -> Result<Self> {
     let next_cursed_number = number_to_id
       .iter()?
@@ -122,7 +122,7 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
       let offset = input_value;
 
       // multi-level cache for UTXO set to get to the input amount
-      input_value += if let Some(value) = self.value_cache.remove(&tx_in.previous_output) {
+      input_value += if let Some(value) = self.value_cache.remove(&tx_in.previous_output.store()) {
         value
       } else if let Some(value) = self
         .outpoint_to_value
@@ -259,7 +259,8 @@ impl<'a, 'db, 'tx> InscriptionUpdater<'a, 'db, 'tx> {
         OutPoint {
           vout: vout.try_into().unwrap(),
           txid,
-        },
+        }
+        .store(),
         tx_out.value,
       );
     }

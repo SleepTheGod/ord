@@ -14,7 +14,6 @@ use {
   indicatif::{ProgressBar, ProgressStyle},
   log::log_enabled,
   redb::{Database, ReadableTable, Table, TableDefinition, WriteStrategy, WriteTransaction},
-  std::collections::HashMap,
   std::sync::atomic::{self, AtomicBool},
 };
 
