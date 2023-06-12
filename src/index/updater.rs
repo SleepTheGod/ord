@@ -30,7 +30,7 @@ impl From<Block> for BlockData {
 }
 
 pub(crate) struct Updater {
-  range_cache: HashMap<OutPointValue, Vec<u8>>,
+  range_cache: BTreeMap<OutPointValue, Vec<u8>>,
   height: u64,
   index_sats: bool,
   sat_ranges_since_flush: u64,
@@ -62,7 +62,7 @@ impl Updater {
       )?;
 
     let mut updater = Self {
-      range_cache: HashMap::new(),
+      range_cache: BTreeMap::new(),
       height,
       index_sats: index.has_sat_index()?,
       sat_ranges_since_flush: 0,
@@ -638,7 +638,7 @@ impl Updater {
 
       let mut outpoint_to_sat_ranges = wtx.open_table(OUTPOINT_TO_SAT_RANGES)?;
 
-      for (outpoint, sat_range) in self.range_cache.drain() {
+      for (outpoint, sat_range) in mem::take(&mut self.range_cache) {
         outpoint_to_sat_ranges.insert(&outpoint, sat_range.as_slice())?;
       }
 
